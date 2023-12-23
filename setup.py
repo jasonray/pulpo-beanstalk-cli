@@ -20,5 +20,5 @@ setup(name='pulpo-beanstalk-cli',
           'License :: OSI Approved :: MIT License',
           'Operating System :: OS Independent',
       ],
-      python_requires='>=3.6',
+      python_requires='>=3.10',
       keywords='beanstalkd,cli,pulpo-messaging')
