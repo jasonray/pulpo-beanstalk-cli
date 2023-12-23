@@ -1,3 +1,2 @@
-art == 6.1
 greenstalk==2.0.2
 loguru==0.7.0
