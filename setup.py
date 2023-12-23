@@ -14,7 +14,7 @@ setup(name='pulpo-beanstalk-cli',
       long_description=long_description,
       long_description_content_type='text/markdown',
       packages=find_packages(),
-      install_requires=['greenstalk==2.0.2','loguru==0.7.0'],
+      install_requires=['greenstalk==2.0.2','loguru==0.7.2'],
       classifiers=[
           'Programming Language :: Python :: 3',
           'License :: OSI Approved :: MIT License',
