@@ -1,12 +1,43 @@
 import os
 import re
 import subprocess
+from typing import Callable
 import unittest
 import time
 import datetime
 from datetime import timedelta
 from uuid import uuid4
 
+BEANSTALKD_PATH = os.getenv("BEANSTALKD_PATH", "beanstalkd")
+DEFAULT_INET_ADDRESS = ("127.0.0.1", 4444)
+
+TestFunc = Callable[[], None]
+WrapperFunc = Callable[[], None]
+DecoratorFunc = Callable[[TestFunc], WrapperFunc]
+
+def with_beanstalkd() -> DecoratorFunc:
+
+    def decorator(test: TestFunc) -> WrapperFunc:
+
+        def wrapper(cls) -> None:
+            cmd = [BEANSTALKD_PATH]
+            host = '127.0.0.1'
+            port = 11300
+            address = (host,port)
+            cmd.extend(["-l", host, "-p", str(port)])
+            print(f'starting beanstalkd [{cmd=}][{address=}]')
+            with subprocess.Popen(cmd) as beanstalkd:
+                print(f'started beanstalkd {beanstalkd.pid=}')
+                time.sleep(0.1)
+                try:
+                    test(cls)
+                finally:
+                    print(f'terminating beanstalkd {beanstalkd.pid=}')
+                    beanstalkd.terminate()
+
+        return wrapper
+
+    return decorator
 
 class TestCli(unittest.TestCase):
     def get_tubename(self) :
@@ -44,6 +75,7 @@ class TestCli(unittest.TestCase):
         assert result.returncode == 0
         assert 'root' in str(result.stdout)
 
+    @with_beanstalkd()
     def test_put(self):
         tubename = self.get_tubename()
         additional_args = ['--body=sample']
@@ -54,6 +86,7 @@ class TestCli(unittest.TestCase):
         print(f'{job_id=}')
         self.assertIsNotNone(job_id)
 
+    @with_beanstalkd()
     def test_put_peek(self):
         tubename = self.get_tubename()
         additional_args = ['--body=sample']
@@ -69,6 +102,7 @@ class TestCli(unittest.TestCase):
         assert result.returncode == 0
         assert 'sample' in str(result.stdout)
 
+    @with_beanstalkd()
     def test_put_pop_peek(self):
         tubename = self.get_tubename()
         additional_args = ['--body=sample']
@@ -93,6 +127,7 @@ class TestCli(unittest.TestCase):
         result =self.run_cli(command='peek', tubename=tubename , additional_args=additional_args  )
         assert result.returncode == 1
 
+    @with_beanstalkd()
     def test_put_delete_peek(self):
         tubename = self.get_tubename()
         additional_args = ['--body=sample']
@@ -117,24 +152,28 @@ class TestCli(unittest.TestCase):
         result =self.run_cli(command='peek', tubename=tubename , additional_args=additional_args  )
         assert result.returncode == 1
 
+    @with_beanstalkd()
     def test_pop_empty(self):
         tubename = self.get_tubename()
         result =self.run_cli(command='pop', tubename=tubename )
         assert result.returncode == 0
         assert 'no message available' in str( result.stdout)
 
+    @with_beanstalkd()
     def test_peek_no_job_id(self):
         tubename = self.get_tubename()
         result =self.run_cli(command='peek', tubename=tubename )
         assert result.returncode == 1
         assert 'invalid job id' in str( result.stderr)
 
+    @with_beanstalkd()
     def test_delete_no_job_id(self):
         tubename = self.get_tubename()
         result =self.run_cli(command='peek', tubename=tubename )
         assert result.returncode == 1
         assert 'invalid job id' in str( result.stderr)
 
+    @with_beanstalkd()
     def test_invalid_command(self):
         tubename = self.get_tubename()
         result =self.run_cli(command='invalidcode', tubename=tubename , additional_args=[]  )
